@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import yahooFinance from "yahoo-finance2";
 import { RSI, EMA, MACD } from "technicalindicators";
 
 export default function Home() {
@@ -15,35 +15,46 @@ export default function Home() {
   useEffect(() => {
     async function fetchGoldData() {
       try {
-        const res = await axios.get("https://api.gold-api.com/price/XAU");
-        const price = res.data.price;
+        const data5m = await yahooFinance.chart("GC=F", {
+          interval: "5m",
+          range: "5d",
+        });
 
-        setXauPrice(price.toFixed(2));
-        setMgcPrice((price / 100).toFixed(2));
+        const data15m = await yahooFinance.chart("GC=F", {
+          interval: "15m",
+          range: "5d",
+        });
 
-        // demo history for indicators
-        const history = [];
-        for (let i = 0; i < 60; i++) {
-          history.push(price + (Math.random() * 20 - 10));
-        }
+        const closes5m = data5m.quotes.map((q) => q.close).filter(Boolean);
+        const closes15m = data15m.quotes.map((q) => q.close).filter(Boolean);
+
+        const currentPrice = closes5m[closes5m.length - 1];
+
+        setXauPrice(currentPrice.toFixed(2));
+        setMgcPrice((currentPrice / 100).toFixed(2));
 
         const rsi = RSI.calculate({
-          values: history,
+          values: closes5m,
           period: 14,
         });
 
         const ema20 = EMA.calculate({
-          values: history,
+          values: closes5m,
           period: 20,
         });
 
         const ema50 = EMA.calculate({
-          values: history,
+          values: closes5m,
           period: 50,
         });
 
+        const ema15Trend = EMA.calculate({
+          values: closes15m,
+          period: 20,
+        });
+
         const macd = MACD.calculate({
-          values: history,
+          values: closes5m,
           fastPeriod: 12,
           slowPeriod: 26,
           signalPeriod: 9,
@@ -55,47 +66,53 @@ export default function Home() {
         const latestEMA20 = ema20[ema20.length - 1];
         const latestEMA50 = ema50[ema50.length - 1];
         const latestMACD = macd[macd.length - 1];
+        const latest15Trend = ema15Trend[ema15Trend.length - 1];
+        const current15 = closes15m[closes15m.length - 1];
 
         let score = 50;
 
-        if (latestEMA20 > latestEMA50) score += 15;
-        else score += 15;
+        const bullish = latestEMA20 > latestEMA50;
+        const bearish = latestEMA20 < latestEMA50;
+
+        if (bullish || bearish) score += 10;
 
         if (latestMACD.MACD > latestMACD.signal) score += 15;
 
-        if (latestRSI > 45 && latestRSI < 65) score += 10;
+        if (latestRSI > 45 && latestRSI < 65) score += 15;
+
+        if (current15 > latest15Trend && bullish) score += 15;
+
+        if (current15 < latest15Trend && bearish) score += 15;
 
         setConfidence(score);
-        setEntry(price.toFixed(2));
+        setEntry(currentPrice.toFixed(2));
 
         if (score < 75) {
           setSignal("WAIT");
           setRisk("NO TRADE");
           setSl("--");
           setTp("--");
-        } else if (score >= 75 && score < 80) {
-          if (latestEMA20 > latestEMA50) {
+        } else if (score < 80) {
+          if (bullish) {
             setSignal("SMALL BUY");
-            setSl((price - 8).toFixed(2));
-            setTp((price + 16).toFixed(2));
+            setSl((currentPrice - 8).toFixed(2));
+            setTp((currentPrice + 16).toFixed(2));
           } else {
             setSignal("SMALL SELL");
-            setSl((price + 8).toFixed(2));
-            setTp((price - 16).toFixed(2));
+            setSl((currentPrice + 8).toFixed(2));
+            setTp((currentPrice - 16).toFixed(2));
           }
-
           setRisk("0.25% - 0.5%");
         } else {
-          if (latestEMA20 > latestEMA50) {
+          if (bullish) {
             setSignal("STRONG BUY");
-            setSl((price - 10).toFixed(2));
-            setTp((price + 20).toFixed(2));
+            setSl((currentPrice - 10).toFixed(2));
+            setTp((currentPrice + 20).toFixed(2));
           } else {
             setSignal("STRONG SELL");
-            setSl((price + 10).toFixed(2));
-            setTp((price - 20).toFixed(2));
+            setSl((currentPrice + 10).toFixed(2));
+            setTp((currentPrice - 20).toFixed(2));
           }
-
           setRisk("0.75% - 1%");
         }
       } catch (error) {
@@ -104,7 +121,7 @@ export default function Home() {
     }
 
     fetchGoldData();
-    const interval = setInterval(fetchGoldData, 10000);
+    const interval = setInterval(fetchGoldData, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -124,7 +141,7 @@ export default function Home() {
         textAlign: "center",
       }}
     >
-      <h1>AdmyGold AI PRO</h1>
+      <h1>AdmyGold AI PRO REAL</h1>
 
       <h2>XAUUSD: ${xauPrice}</h2>
       <h2>MGC Futures: ${mgcPrice}</h2>
