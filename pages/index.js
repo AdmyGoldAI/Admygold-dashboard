@@ -1,4 +1,4 @@
-s
+
 
     fetchGoldData();
     const interval = setInterval(fetchGoldData, 10000);
