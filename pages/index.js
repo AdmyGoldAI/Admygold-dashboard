@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import yahooFinance from "yahoo-finance2";
 import { RSI, EMA, MACD } from "technicalindicators";
 
 export default function Home() {
@@ -13,141 +12,70 @@ export default function Home() {
   const [risk, setRisk] = useState("NO TRADE");
 
   useEffect(() => {
-    async function fetchGoldData() {
-      try {
-        const data5m = await yahooFinance.chart("GC=F", {
-          interval: "5m",
-          range: "5d",
-        });
+    function fetchGoldData() {
+      const closes5m = [3300, 3302, 3301, 3305, 3307, 3304, 3308, 3310, 3309, 3312, 3315, 3313, 3316, 3318];
+      const closes15m = [3290, 3295, 3298, 3300, 3303, 3306, 3310, 3312, 3315, 3318, 3320, 3322, 3325, 3328];
 
-        const data15m = await yahooFinance.chart("GC=F", {
-          interval: "15m",
-          range: "5d",
-        });
+      const currentPrice = closes5m[closes5m.length - 1];
 
-        const closes5m = data5m.quotes.map((q) => q.close).filter(Boolean);
-        const closes15m = data15m.quotes.map((q) => q.close).filter(Boolean);
+      setXauPrice(currentPrice.toFixed(2));
+      setMgcPrice((currentPrice / 100).toFixed(2));
 
-        const currentPrice = closes5m[closes5m.length - 1];
+      const rsi = RSI.calculate({
+        values: closes5m,
+        period: 14,
+      });
 
-        setXauPrice(currentPrice.toFixed(2));
-        setMgcPrice((currentPrice / 100).toFixed(2));
+      const ema = EMA.calculate({
+        values: closes15m,
+        period: 9,
+      });
 
-        const rsi = RSI.calculate({
-          values: closes5m,
-          period: 14,
-        });
+      const macd = MACD.calculate({
+        values: closes15m,
+        fastPeriod: 12,
+        slowPeriod: 26,
+        signalPeriod: 9,
+      });
 
-        const ema20 = EMA.calculate({
-          values: closes5m,
-          period: 20,
-        });
+      const latestRsi = rsi[rsi.length - 1] || 50;
+      const latestEma = ema[ema.length - 1] || currentPrice;
+      const latestMacd = macd[macd.length - 1] || { MACD: 0, signal: 0 };
 
-        const ema50 = EMA.calculate({
-          values: closes5m,
-          period: 50,
-        });
+      let conf = 70;
+      let sig = "WAIT";
 
-        const ema15Trend = EMA.calculate({
-          values: closes15m,
-          period: 20,
-        });
+      if (latestRsi < 35 && currentPrice > latestEma && latestMacd.MACD > latestMacd.signal) {
+        sig = "BUY";
+        conf = 82;
+      } else if (latestRsi > 65 && currentPrice < latestEma && latestMacd.MACD < latestMacd.signal) {
+        sig = "SELL";
+        conf = 82;
+      }
 
-        const macd = MACD.calculate({
-          values: closes5m,
-          fastPeriod: 12,
-          slowPeriod: 26,
-          signalPeriod: 9,
-          SimpleMAOscillator: false,
-          SimpleMASignal: false,
-        });
+      setSignal(sig);
+      setConfidence(conf);
 
-        const latestRSI = rsi[rsi.length - 1];
-        const latestEMA20 = ema20[ema20.length - 1];
-        const latestEMA50 = ema50[ema50.length - 1];
-        const latestMACD = macd[macd.length - 1];
-        const latest15Trend = ema15Trend[ema15Trend.length - 1];
-        const current15 = closes15m[closes15m.length - 1];
-
-        let score = 50;
-
-        const bullish = latestEMA20 > latestEMA50;
-        const bearish = latestEMA20 < latestEMA50;
-
-        if (bullish || bearish) score += 10;
-
-        if (latestMACD.MACD > latestMACD.signal) score += 15;
-
-        if (latestRSI > 45 && latestRSI < 65) score += 15;
-
-        if (current15 > latest15Trend && bullish) score += 15;
-
-        if (current15 < latest15Trend && bearish) score += 15;
-
-        setConfidence(score);
+      if (conf >= 75 && sig !== "WAIT") {
         setEntry(currentPrice.toFixed(2));
-
-        if (score < 75) {
-          setSignal("WAIT");
-          setRisk("NO TRADE");
-          setSl("--");
-          setTp("--");
-        } else if (score < 80) {
-          if (bullish) {
-            setSignal("SMALL BUY");
-            setSl((currentPrice - 8).toFixed(2));
-            setTp((currentPrice + 16).toFixed(2));
-          } else {
-            setSignal("SMALL SELL");
-            setSl((currentPrice + 8).toFixed(2));
-            setTp((currentPrice - 16).toFixed(2));
-          }
-          setRisk("0.25% - 0.5%");
-        } else {
-          if (bullish) {
-            setSignal("STRONG BUY");
-            setSl((currentPrice - 10).toFixed(2));
-            setTp((currentPrice + 20).toFixed(2));
-          } else {
-            setSignal("STRONG SELL");
-            setSl((currentPrice + 10).toFixed(2));
-            setTp((currentPrice - 20).toFixed(2));
-          }
-          setRisk("0.75% - 1%");
-        }
-      } catch (error) {
-        console.error(error);
+        setSl((currentPrice - 10).toFixed(2));
+        setTp((currentPrice + 20).toFixed(2));
+        setRisk(conf >= 80 ? "HIGH CONFIDENCE" : "SMALL RISK");
       }
     }
 
     fetchGoldData();
-    const interval = setInterval(fetchGoldData, 60000);
-
-    return () => clearInterval(interval);
   }, []);
 
   const signalColor =
-    signal.includes("BUY")
-      ? "green"
-      : signal.includes("SELL")
-      ? "red"
-      : "orange";
+    signal === "BUY" ? "green" : signal === "SELL" ? "red" : "orange";
 
   return (
-    <div
-      style={{
-        padding: "40px",
-        fontFamily: "Arial",
-        textAlign: "center",
-      }}
-    >
-      <h1>AdmyGold AI PRO REAL</h1>
-
-      <h2>XAUUSD: ${xauPrice}</h2>
-      <h2>MGC Futures: ${mgcPrice}</h2>
-
+    <div style={{ textAlign: "center", padding: "50px", fontFamily: "Arial" }}>
+      <h1>Admy Gold AI Dashboard</h1>
+      <h2>XAU/USD: {xauPrice}</h2>
+      <h2>MGC: {mgcPrice}</h2>
       <h1 style={{ color: signalColor }}>{signal}</h1>
-
       <h2>Confidence: {confidence}%</h2>
       <h3>Entry: {entry}</h3>
       <h3>Stop Loss: {sl}</h3>
