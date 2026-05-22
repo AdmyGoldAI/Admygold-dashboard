@@ -1,5 +1,7 @@
 
-
+fetchGoldData();
+const interval = ...
+return () => ...
     fetchGoldData();
     const interval = setInterval(fetchGoldData, 10000);
 
