@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function Home() {
@@ -15,27 +15,20 @@ export default function Home() {
     async function fetchGoldData() {
       try {
         const response = await axios.get(
-          "https://query1.finance.yahoo.com/v8/finance/chart/GC=F"
+          "https://api.gold-api.com/price/XAU"
         );
 
-        const price = response.data.chart.result[0].meta.regularMarketPrice;
+        const price = response.data.price;
 
-        setXauPrice(price.toFixed(2));
+        setXauPrice(price);
         setMgcPrice((price / 100).toFixed(2));
 
-        if (price > 3325) {
+        if (price > 3300) {
           setSignal("BUY");
-          setConfidence(82);
-          setEntry(price.toFixed(2));
+          setConfidence(85);
+          setEntry(price);
           setSl((price - 10).toFixed(2));
           setTp((price + 20).toFixed(2));
-          setRisk("SMALL RISK");
-        } else if (price < 3300) {
-          setSignal("SELL");
-          setConfidence(81);
-          setEntry(price.toFixed(2));
-          setSl((price + 10).toFixed(2));
-          setTp((price - 20).toFixed(2));
           setRisk("SMALL RISK");
         } else {
           setSignal("WAIT");
@@ -54,7 +47,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ textAlign: "center", marginTop: "100px", fontFamily: "Arial" }}>
+    <div style={{ textAlign: "center", marginTop: "100px" }}>
       <h1>Admy Gold AI Dashboard</h1>
       <h2>XAU/USD: {xauPrice}</h2>
       <h2>MGC: {mgcPrice}</h2>
