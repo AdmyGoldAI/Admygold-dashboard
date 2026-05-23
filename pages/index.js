@@ -1,50 +1,30 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
 
 export default function Home() {
-  const [xauPrice, setXauPrice] = useState("Loading...");
-  const [mgcPrice, setMgcPrice] = useState("Loading...");
-  const [signal, setSignal] = useState("WAIT");
-  const [confidence, setConfidence] = useState(70);
-  const [entry, setEntry] = useState("--");
-  const [sl, setSl] = useState("--");
-  const [tp, setTp] = useState("--");
-  const [risk, setRisk] = useState("NO TRADE");
+  const [xauPrice, setXauPrice] = useState(4510.5);
+  const [mgcPrice, setMgcPrice] = useState(45.10);
 
-  useEffect(() => {
-    async function fetchGoldData() {
-      try {
-        const response = await axios.get(
-          "https://api.gold-api.com/price/XAU"
-        );
+  let signal = "WAIT";
+  let confidence = 70;
+  let entry = "--";
+  let sl = "--";
+  let tp = "--";
+  let risk = "NO TRADE";
 
-        const price = response.data.price;
+  if (xauPrice > 4500) {
+    signal = "BUY";
+    confidence = 85;
+    entry = xauPrice;
+    sl = xauPrice - 10;
+    tp = xauPrice + 20;
+    risk = "SMALL RISK";
+  }
 
-        setXauPrice(price);
-        setMgcPrice((price / 100).toFixed(2));
-
-        if (price > 3300) {
-          setSignal("BUY");
-          setConfidence(85);
-          setEntry(price);
-          setSl((price - 10).toFixed(2));
-          setTp((price + 20).toFixed(2));
-          setRisk("SMALL RISK");
-        } else {
-          setSignal("WAIT");
-          setConfidence(70);
-          setEntry("--");
-          setSl("--");
-          setTp("--");
-          setRisk("NO TRADE");
-        }
-      } catch (error) {
-        console.log(error);
-      }
-    }
-
-    fetchGoldData();
-  }, []);
+  if (signal === "BUY" || signal === "SELL") {
+    fetch(
+      https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${process.env.TELEGRAM_CHAT_ID}&text=${signal} XAUUSD ${confidence}% Entry:${entry} SL:${sl} TP:${tp}
+    );
+  }
 
   return (
     <div style={{ textAlign: "center", marginTop: "100px" }}>
