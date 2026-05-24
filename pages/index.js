@@ -1,4 +1,4 @@
-export default async function Home() {
+export default function Home() {
   const xauPrice = 3345;
   const mgcPrice = 3348;
   const signal = "BUY";
