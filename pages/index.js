@@ -1,11 +1,11 @@
-export default function Home() {
-  const xauPrice = "3345";
-  const mgcPrice = "3348";
+export default async function Home() {
+  const xauPrice = 3345;
+  const mgcPrice = 3348;
   const signal = "BUY";
   const confidence = 82;
-  const entry = "3344";
-  const sl = "3338";
-  const tp = "3355";
+  const entry = 3344;
+  const sl = 3338;
+  const tp = 3355;
   const risk = "LOW";
 
   return (
