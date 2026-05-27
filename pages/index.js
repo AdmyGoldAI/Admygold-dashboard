@@ -1,5 +1,5 @@
 export default async function Home() {
-  await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage, {
+  await fetch(https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
